@@ -1,0 +1,45 @@
+# AgentWiki — Working log (root)
+
+> Nhật ký ĐANG LÀM — đổi thường xuyên. Format ngày: `YYYY-MM-DD` (ISO).
+> Đây là nguồn chính cho session start (đọc tự động theo AGENTS.md).
+> Log chi tiết lịch sử: `.project/working.md`.
+
+## 2026-08-11
+
+- [x] **Setup AdMob production (Android)**: App ID `ca-app-pub-6917313063209470~4401678345`
+      vào `AndroidManifest.xml`; banner thật `ca-app-pub-6917313063209470/1911246375`
+      vào `lib/ads/ad_config.dart` (`useTestAds=false`). iOS giữ test ID (chưa có app
+      iOS trên AdMob — quyết định của user: banner Android-only).
+- [x] Lưu sẵn interstitial (`.../1759771350`) + rewarded (`.../9446689683`) ID vào
+      config — chưa có code dùng (user chọn "chỉ lưu ID").
+
+## 2026-08-09
+
+- [x] Chốt với user: mobile-first (iOS+Android), scope Phase 0–2 đầy đủ, OpenRouter BYOK.
+- [x] OpenSpec đầy đủ: `openspec/project.md` + 11 capabilities + 3 changes (proposal/tasks/tests).
+- [x] Scaffold `agent_wiki/` + deps (sqlite3, yaml, markdown, flutter_markdown, provider, secure_storage…).
+- [x] Core models + canonical storage (`WikiStore`) + `IndexDb` (SQLite+FTS5, rebuild) + `WikiRepository` (canonical-first).
+- [x] Semantic Patch Engine: 8 ops, template headings/page_type, revisions page+claim, chặn agent set cross_checked/human_verified.
+- [x] AI layer: LlmProvider interface, OpenRouter BYOK, Mock/Demo offline, prompts (PROMPT_TYPE markers), parser chống injection.
+- [x] Services: Import, Compile (Luồng A), Ask + citations, Promote/Inbox (Luồng B + cross-model), Export, Settings.
+- [x] UI mobile: AppShell 5 tabs + Home/Ask/Page/Search/Inbox/Sources/Settings + status badges/claim cards.
+- [x] Tests: 28 pass — frontmatter, patch engine, widget smoke, acceptance TEST-001..011.
+- [x] Fix review: getPage canonical-first, quote verbatim ở engine, corroboration chỉ khi upgrade trust, bỏ dead code, yaml package cho wiki.yaml.
+- [x] Fix build env: AGP 9.1/Gradle 9.1 → AGP 8.9.1/Gradle 8.14.3/Kotlin 2.2.20; file_picker 3.0.4 → 10.3.10; flutter_secure_storage 11 → 10.3.1; minSdk 23.
+- [x] Xử lý ENOSPC → `flutter pub get` lại; build APK debug thành công (~154MB).
+- [x] Test trên Android thật: `adb -s 192.168.0.101:33929` (Galaxy A04) — install/launch/UI render OK, logcat sạch.
+- [x] Fix `LateInitializationError` trên device — gate `AppHome` (splash → shell, error + Retry) trong `app.dart`; init chống double-run.
+- [x] Fix `sqlite3_initialize` trên device — hạ `sqlite3 2.9.4` + `sqlite3_flutter_libs 0.5.42` (native assets 3.x + stub +eol fail); `close()`→`dispose()`. Verify: `app_flutter/agentwiki/.agentwiki/index.sqlite` + `wiki.yaml` tạo OK.
+- [x] Tạo 5 skills tại `.agents/skills/` (build triage · device smoke test · startup gate · test discovery · FTS5 queries).
+- [x] Tạo memory files root: AGENTS.md/CLAUDE.md (điền phần PROJECT) + context.md + working.md + operating_rules.md.
+- [x] **Tích hợp AdMob banner** (`google_mobile_ads ^9.0.0`): AdService singleton (initialize + banner unit id theo platform), widget `AdBanner` (fallback sạch khi load fail), đặt ở Home + Page screen; Android Manifest + iOS Info.plist (test App IDs). Analyze sạch · 28/28 test · build APK OK.
+  - **Cách chuyển sang production**: (1) Đăng ký app trên [AdMob console](https://admob.google.com) → thêm app iOS + Android → nhận App ID + tạo banner ad unit → (2) cập nhật App ID trong `AndroidManifest.xml` + `Info.plist` → (3) điền banner IDs vào `lib/ads/ad_config.dart` (`_kAndroidProdBanner`/`_kIosProdBanner`) → (4) `useTestAds = false` → (5) build release + test trên device thật. ⚠️ KHÔNG dùng production ID khi dev (bị ban invalid traffic).
+
+## Việc tiếp theo
+
+- [ ] **Commit lần đầu** (repo chưa có commit nào — baseline toàn repo).
+- [ ] Đăng ký AdMob console → lấy App ID + banner IDs thật → chuyển `useTestAds=false` (xem `lib/ads/ad_config.dart`).
+- [ ] Chạy thử luồng Import → Compile → Ask → Inbox Accept với OpenRouter key thật (Settings → nhập key).
+- [ ] Kiểm tra iOS build (`flutter build ios --no-codesign` / `flutter run -d`).
+- [ ] Dogfood ≥5–7 ngày + nhật ký 3 câu/ngày → Gate metric §6.
+- [ ] Backlog B1–B9 (`context.md` / `.project/overview.md §5`) — ưu tiên B1 Inbox UI, B4 Entity Index, B9 patch engine.

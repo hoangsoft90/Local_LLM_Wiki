@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "930022063299",
+    "project_id": "localllmwiki",
+    "storage_bucket": "localllmwiki.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:930022063299:android:224f0461b3a9aed9bdb676",
+        "android_client_info": {
+          "package_name": "com.agentwiki.agent_wiki"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfohdVvSS720Okf-quYo6R6G3lapQ3ZTo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

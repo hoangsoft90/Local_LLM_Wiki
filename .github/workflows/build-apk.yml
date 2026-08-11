@@ -1,0 +1,56 @@
+name: Build APK
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.44.0'
+          cache: true
+
+      - name: Accept Android licenses + disable analytics
+        run: |
+          flutter config --no-analytics > /dev/null 2>&1 || true
+          yes | flutter doctor --android-licenses > /dev/null 2>&1 || true
+
+      - name: Pub get
+        working-directory: agent_wiki
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: agent_wiki
+        run: flutter analyze
+
+      - name: Test
+        working-directory: agent_wiki
+        run: flutter test
+
+      - name: Build APK (release)
+        working-directory: agent_wiki
+        run: flutter build apk --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentwiki-apk
+          path: agent_wiki/build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: error
