@@ -20,6 +20,8 @@
       Web stub: AdService/AdBanner (google_mobile_ads không hỗ trợ web), import qua bytes,
       export bị guard. `flutter create --platforms web`; thêm `web ^1.1.0`; CI thêm job build-web.
       **Verify: analyze sạch · 34/34 test (28 cũ + 6 web_storage_test trên VM) · build web OK**.
+- [x] **targetSdk 36** (Google Play yêu cầu từ 31/08/2026): hardcode `compileSdk = 36` +
+      `targetSdk = 36` trong `android/app/build.gradle.kts` (không phụ thuộc default Flutter; CI pin 3.44.6).
 
 ## 2026-08-11
 
