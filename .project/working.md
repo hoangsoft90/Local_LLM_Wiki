@@ -3,6 +3,19 @@
 > Nhật ký chi tiết (KI). **Nguồn chính khi session start: `../working.md`** (root) — được đọc tự động theo AGENTS.md. File này giữ log chi tiết; giữ đồng bộ với root khi cập nhật.
 > Format ngày: `YYYY-MM-DD` (ISO). Dọn mục cũ >1–2 tuần.
 
+## 2026-08-14
+
+- [x] Push + build APK trên GH Actions (không build local): commit `0c9ee72` (docs) + `c737832`
+      (HTTP fix) → CI `Build APK` success, artifact `agentwiki-apk` ~29MB.
+- [x] Fix release HTTP: `usesCleartextTraffic="true"` + `INTERNET` permission trong main
+      `AndroidManifest.xml` (trước đó INTERNET chỉ ở debug/profile).
+- [x] Web platform storage split (`openspec/changes/web-platform-storage`): `FileSystem`
+      abstraction (io/localStorage, conditional factory) + `WikiIndex` (IndexDb implements;
+      `LocalStorageIndex` in-memory rebuild từ canonical). `WikiStore`/`WikiRepository` bỏ hết
+      `dart:io`. Web stubs: ads (google_mobile_ads không hỗ trợ web), import bytes, export guard.
+      Thêm web platform + `web ^1.1.0` + CI job build-web. Verify: analyze sạch · 34/34 test
+      (thêm `web_storage_test.dart` VM) · `flutter build web` OK.
+
 ## 2026-08-11
 
 - [x] Setup AdMob production (Android): App ID `ca-app-pub-6917313063209470~4401678345` + banner `ca-app-pub-6917313063209470/1911246375` (`useTestAds=false`); iOS giữ test; interstitial/rewarded ID lưu config chưa dùng.

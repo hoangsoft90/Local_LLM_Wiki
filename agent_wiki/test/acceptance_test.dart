@@ -43,8 +43,8 @@ void main() {
     final s3 = repo.importSource(title: 'ai-agents.md', content: changed);
     expect(s3.id, s1.id);
     expect(s3.version, 2);
-    final historyFile = File(
-        '${repo.store.sourcesDir.path}/history/${s1.id}-v1.md');
+    final historyFile =
+        File('${repo.store.sourcesDir}/history/${s1.id}-v1.md');
     expect(historyFile.existsSync(), isTrue);
   });
 
@@ -370,7 +370,7 @@ void main() {
     expect(before, isNotEmpty);
 
     // Delete the derived index and rebuild from canonical files.
-    final indexFile = File(repo.store.indexDbFile.path);
+    final indexFile = File(repo.store.indexDbPath);
     expect(indexFile.existsSync(), isTrue);
     repo.rebuild();
 
@@ -408,7 +408,7 @@ void main() {
     await CompileService(repo, llm, settings).compile(source);
 
     final page = repo.getPageByTitle('AI agents')!;
-    final file = File('${repo.store.pagesDir.path}/${page.filename}');
+    final file = File('${repo.store.pagesDir}/${page.filename}');
     expect(file.existsSync(), isTrue);
 
     repo.deprecatePage(page.id);

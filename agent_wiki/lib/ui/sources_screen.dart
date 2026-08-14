@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import '../core/models/models.dart';
@@ -57,11 +58,21 @@ class SourcesScreen extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     final result = await FilePicker.platform.pickFiles(type: FileType.any);
     if (result == null || result.files.isEmpty) return;
-    final path = result.files.single.path;
-    if (path == null || !context.mounted) return;
+    final file = result.files.single;
+    final path = file.path;
+    if (!context.mounted) return;
 
+    SourceRecord source;
     try {
-      final source = app.importer.importFromPath(path);
+      if (path != null) {
+        source = app.importer.importFromPath(path);
+      } else if (file.bytes != null) {
+        // Web: file_picker trả bytes (không có path).
+        source = app.importer
+            .importFromBytes(p.basenameWithoutExtension(file.name), file.bytes!);
+      } else {
+        return;
+      }
       messenger.showSnackBar(SnackBar(
         content: Text('Imported "${source.title}" v${source.version} — '
             'compiling…'),

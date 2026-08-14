@@ -1,0 +1,10 @@
+/// Web stub — `google_mobile_ads` has no web implementation, so no ads are
+/// shown on web. Keeps the same surface as the io [AdService].
+class AdService {
+  AdService._();
+  static final AdService instance = AdService._();
+
+  Future<void> get ready async {}
+
+  String? get bannerAdUnitId => null;
+}

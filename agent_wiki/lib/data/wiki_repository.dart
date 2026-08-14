@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -10,25 +9,34 @@ import '../core/models/patch_op.dart';
 import '../core/util/frontmatter.dart';
 import '../core/util/util.dart';
 import '../domain/patch_engine.dart';
-import 'database.dart';
+import 'fs/fs_factory.dart';
+import 'fs/fs_interface.dart';
+import 'index_factory.dart';
+import 'wiki_index.dart';
 import 'wiki_store.dart';
 
 /// Central repository: canonical store + derived index + patch engine.
+/// Storage backend is platform-selected: real files + SQLite on
+/// mobile/desktop, localStorage + in-memory index on web.
 class WikiRepository {
   final WikiStore store;
-  final IndexDb index;
+  final WikiIndex index;
   late final PatchEngine patch;
 
-  WikiRepository._(this.store, this.index) {
+  /// Usually created via [WikiRepository.open]; the direct constructor is
+  /// used by tests to inject a specific storage backend.
+  WikiRepository(this.store, this.index) {
     patch = PatchEngine(this);
   }
 
-  /// Open the wiki. [rootDir] defaults to `<app-documents>/agentwiki`.
+  /// Open the wiki. [rootDir] defaults to `<app-documents>/agentwiki` on
+  /// mobile/desktop, or the `agentwiki` localStorage namespace on web.
   static Future<WikiRepository> open({String? rootDir}) async {
-    final root = rootDir ?? await _defaultRoot();
-    final store = WikiStore(root)..init();
-    final index = IndexDb.open(store.indexDbFile.path);
-    return WikiRepository._(store, index);
+    final fs = createFileSystem();
+    final root = rootDir ?? (kIsWeb ? 'agentwiki' : await _defaultRoot());
+    final store = WikiStore(root, fs: fs)..init();
+    final index = openIndex(store);
+    return WikiRepository(store, index);
   }
 
   static Future<String> _defaultRoot() async {
@@ -118,10 +126,10 @@ class WikiRepository {
   PageRecord? getPage(String id) {
     // Canonical markdown is the source of truth (spec D1) — the derived
     // index is only a fallback for pages whose file is missing.
-    for (final f in store.pagesDir.listSync().whereType<File>()) {
-      final doc = parseFrontmatter(f.readAsStringSync());
+    for (final f in store.listPageFiles()) {
+      final doc = parseFrontmatter(store.readPageFile(f));
       if (doc.frontmatter['page_id'] == id) {
-        return store.readPage(id, p.basename(f.path));
+        return store.readPage(id, f);
       }
     }
     return index.getPage(id);
@@ -131,18 +139,15 @@ class WikiRepository {
     final fromDb = index.getPageByTitle(title);
     if (fromDb != null) return fromDb;
     // Fall back to scanning canonical files.
-    for (final f in store.pagesDir.listSync().whereType<File>()) {
-      final doc = _readPageFile(f.path);
-      if (doc != null && doc.title == title) return doc;
+    for (final f in store.listPageFiles()) {
+      final doc = parseFrontmatter(store.readPageFile(f));
+      if (doc.frontmatter['title'] == title) {
+        final id = doc.frontmatter['page_id'] as String?;
+        if (id == null) continue;
+        return store.readPage(id, f);
+      }
     }
     return null;
-  }
-
-  PageRecord? _readPageFile(String path) {
-    final text = File(path).readAsStringSync();
-    final id = parseFrontmatter(text).frontmatter['page_id'] as String?;
-    if (id == null) return null;
-    return store.readPage(id, p.basename(path));
   }
 
   List<PageRecord> listPages({PageType? type}) => index.listPages(type: type);
@@ -245,49 +250,40 @@ class WikiRepository {
 
   /// Drop + rebuild the derived index from canonical files (TEST-007).
   void rebuild() {
-    final pages = <PageRecord>[];
-    for (final f in store.pagesDir.listSync().whereType<File>()) {
-      final page = _readPageFile(f.path);
-      if (page != null) pages.add(page);
-    }
     final claims = <Claim>[];
-    for (final f in store.claimsDir.listSync().whereType<File>()) {
-      try {
-        final c = store.readClaim(p.basenameWithoutExtension(f.path)
-            .replaceFirst('claim_', ''));
-        if (c != null) claims.add(c);
-      } catch (_) {}
+    for (final id in store.listClaimIds()) {
+      final c = store.readClaim(id);
+      if (c != null) claims.add(c);
     }
-    index.rebuild(pages, claims, store.listSources());
+    index.rebuild(store.listPages(), claims, store.listSources());
   }
 
   /// Export the whole wiki (canonical) to [destDir] (TEST-006).
+  /// Writes via [FileSystem] so it works on any platform (web export is
+  /// guarded in the UI — `getDirectoryPath` is unsupported there).
   void exportTo(String destDir) {
-    final dest = Directory(destDir);
-    if (dest.existsSync()) dest.deleteSync(recursive: true);
-    dest.createSync(recursive: true);
-    _copyDir(store.pagesDir, Directory(p.join(dest.path, 'pages')));
-    _copyDir(store.sourcesDir, Directory(p.join(dest.path, 'sources')));
-    _copyDir(store.claimsDir, Directory(p.join(dest.path, 'claims')));
-    File(store.wikiMetaFile.path)
-        .copySync(p.join(dest.path, 'wiki.yaml'));
-    _writeExportManifest(dest);
+    final destFs = createFileSystem();
+    if (destFs.exists(destDir)) destFs.deleteRecursive(destDir);
+    destFs.createDir(destDir);
+    _copyDir(store.fs, store.pagesDir, destFs, p.join(destDir, 'pages'));
+    _copyDir(store.fs, store.sourcesDir, destFs, p.join(destDir, 'sources'));
+    _copyDir(store.fs, store.claimsDir, destFs, p.join(destDir, 'claims'));
+    destFs.writeAsString(
+        p.join(destDir, 'wiki.yaml'), store.fs.readAsString(store.wikiMetaPath));
+    destFs.writeAsString(
+        p.join(destDir, 'EXPORT.md'),
+        '---\nname: "agent-wiki-export"\nexported_at: ${nowIso()}\n---\n');
   }
 
-  void _writeExportManifest(Directory dest) {
-    final buf = StringBuffer('---\nname: "agent-wiki-export"\nexported_at: ${nowIso()}\n---\n');
-    File(p.join(dest.path, 'EXPORT.md')).writeAsStringSync(buf.toString());
-  }
-}
-
-void _copyDir(Directory src, Directory dest) {
-  if (!src.existsSync()) return;
-  dest.createSync(recursive: true);
-  for (final e in src.listSync(recursive: true)) {
-    if (e is File) {
-      final rel = p.relative(e.path, from: src.path);
-      File(p.join(dest.path, rel)).createSync(recursive: true);
-      e.copySync(p.join(dest.path, rel));
+  void _copyDir(FileSystem srcFs, String srcDir, FileSystem destFs,
+      String destDir) {
+    if (!srcFs.exists(srcDir)) return;
+    destFs.createDir(destDir);
+    for (final f in srcFs.listFiles(srcDir, recursive: true)) {
+      final rel = p.relative(f, from: srcDir);
+      final dst = p.join(destDir, rel);
+      destFs.createDir(p.dirname(dst));
+      destFs.writeAsString(dst, srcFs.readAsString(f));
     }
   }
 }

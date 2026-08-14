@@ -54,3 +54,33 @@ jobs:
           name: agentwiki-apk
           path: agent_wiki/build/app/outputs/flutter-apk/*.apk
           if-no-files-found: error
+
+  build-web:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.44.6'
+          cache: true
+
+      - name: Pub get
+        working-directory: agent_wiki
+        run: flutter pub get
+
+      - name: Build web (release)
+        working-directory: agent_wiki
+        run: flutter build web --release
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentwiki-web
+          path: agent_wiki/build/web
+          if-no-files-found: error

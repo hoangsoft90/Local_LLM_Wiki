@@ -5,10 +5,12 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 import '../core/models/enums.dart';
 import '../core/models/models.dart';
 import '../core/util/util.dart';
+import 'wiki_index.dart';
 
 /// Derived SQLite index (openspec: canonical-storage REQ-3/REQ-4/REQ-5).
 /// Fully rebuildable from canonical files — see [rebuild].
-class IndexDb {
+/// The io-only implementation of [WikiIndex]; web uses [LocalStorageIndex].
+class IndexDb implements WikiIndex {
   static const int schemaVersion = 1;
 
   final String path;
@@ -26,6 +28,7 @@ class IndexDb {
     return d;
   }
 
+  @override
   void close() => db.dispose();
 
   void _createSchemaIfNeeded() {
@@ -116,6 +119,7 @@ class IndexDb {
 
   // ---------- sources ----------
 
+  @override
   void upsertSource(SourceRecord s) {
     db.execute(
         '''
@@ -138,6 +142,7 @@ class IndexDb {
     ]);
   }
 
+  @override
   SourceRecord? getSource(String id) {
     final rows = db.select('SELECT * FROM sources WHERE id = ?', [id]);
     if (rows.isEmpty) return null;
@@ -145,6 +150,7 @@ class IndexDb {
   }
 
   /// Highest version of the source with the same identity (by title+url).
+  @override
   int latestVersion(String title, String? url) {
     final rows = db.select(
         'SELECT MAX(version) AS v FROM sources '
@@ -153,6 +159,7 @@ class IndexDb {
     return (rows.first['v'] as int?) ?? 0;
   }
 
+  @override
   List<SourceRecord> listSources() {
     final rows = db.select('SELECT * FROM sources ORDER BY imported_at ASC');
     return rows.map(_sourceFromRow).toList();
@@ -170,6 +177,7 @@ class IndexDb {
 
   // ---------- pages ----------
 
+  @override
   void insertPage(PageRecord p) {
     db.execute(
         '''
@@ -189,6 +197,7 @@ class IndexDb {
     _upsertFts(p);
   }
 
+  @override
   void updatePage(PageRecord p) {
     db.execute(
         '''
@@ -211,18 +220,21 @@ class IndexDb {
     db.execute('DELETE FROM pages WHERE id = ?', [id]);
   }
 
+  @override
   PageRecord? getPage(String id) {
     final rows = db.select('SELECT * FROM pages WHERE id = ?', [id]);
     if (rows.isEmpty) return null;
     return _pageFromRow(rows.first);
   }
 
+  @override
   PageRecord? getPageByTitle(String title) {
     final rows = db.select('SELECT * FROM pages WHERE title = ?', [title]);
     if (rows.isEmpty) return null;
     return _pageFromRow(rows.first);
   }
 
+  @override
   List<PageRecord> listPages({PageType? type}) {
     final sql = 'SELECT * FROM pages'
         '${type != null ? ' WHERE page_type = ?' : ''}'
@@ -253,6 +265,7 @@ class IndexDb {
 
   // ---------- claims ----------
 
+  @override
   void insertClaim(Claim c) {
     db.execute(
         '''
@@ -273,6 +286,7 @@ class IndexDb {
     _syncEvidence(c);
   }
 
+  @override
   void updateClaim(Claim c) {
     db.execute(
         '''
@@ -306,12 +320,14 @@ class IndexDb {
     }
   }
 
+  @override
   Claim? getClaim(String id) {
     final rows = db.select('SELECT * FROM claims WHERE id = ?', [id]);
     if (rows.isEmpty) return null;
     return _claimFromRow(rows.first);
   }
 
+  @override
   List<Claim> claimsForPage(String pageId) {
     final rows = db.select(
         'SELECT * FROM claims WHERE page_id = ? ORDER BY created_at ASC',
@@ -335,6 +351,7 @@ class IndexDb {
         updatedAt: DateTime.parse(r['updated_at'] as String),
       );
 
+  @override
   List<Evidence> evidenceForClaim(String claimId) {
     final rows = db.select(
         'SELECT * FROM evidence WHERE claim_id = ? ORDER BY rowid',
@@ -351,6 +368,7 @@ class IndexDb {
 
   // ---------- links ----------
 
+  @override
   void insertLink(LinkRecord l) {
     db.execute(
         '''
@@ -364,6 +382,7 @@ class IndexDb {
     ]);
   }
 
+  @override
   List<LinkRecord> listLinks(String pageId) {
     final rows = db.select(
         'SELECT * FROM links WHERE source_page_id = ? OR target_page_id = ?',
@@ -378,6 +397,7 @@ class IndexDb {
 
   // ---------- revisions ----------
 
+  @override
   void insertRevision(Revision r) {
     db.execute(
         '''
@@ -392,6 +412,7 @@ class IndexDb {
     ]);
   }
 
+  @override
   List<Revision> listRevisions({String? targetId}) {
     final sql = 'SELECT * FROM revisions'
         '${targetId != null ? ' WHERE target_id = ?' : ''}'
@@ -408,6 +429,7 @@ class IndexDb {
 
   // ---------- search ----------
 
+  @override
   List<SearchHit> search(String query, {int limit = 20}) {
     final q = ftsQuery(query);
     if (q.isEmpty) return const [];
@@ -450,15 +472,19 @@ class IndexDb {
 
   // ---------- counts ----------
 
+  @override
   int countPages() =>
       db.select('SELECT COUNT(*) AS c FROM pages').first['c'] as int;
 
+  @override
   int countClaims() =>
       db.select('SELECT COUNT(*) AS c FROM claims').first['c'] as int;
 
+  @override
   int countSources() =>
       db.select('SELECT COUNT(*) AS c FROM sources').first['c'] as int;
 
+  @override
   int countRevisions() =>
       db.select('SELECT COUNT(*) AS c FROM revisions').first['c'] as int;
 
@@ -468,6 +494,7 @@ class IndexDb {
   // ---------- rebuild ----------
 
   /// Drop and rebuild the entire derived index from canonical state (TEST-007).
+  @override
   void rebuild(List<PageRecord> pages, List<Claim> claims,
       List<SourceRecord> sources) {
     db.dispose();

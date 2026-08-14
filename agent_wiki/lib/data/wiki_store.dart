@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
@@ -9,31 +8,37 @@ import '../core/models/enums.dart';
 import '../core/models/models.dart';
 import '../core/util/frontmatter.dart';
 import '../core/util/util.dart';
+import 'fs/fs_factory.dart';
+import 'fs/fs_interface.dart';
 
-/// Canonical filesystem store (openspec: canonical-storage).
+/// Canonical store (openspec: canonical-storage).
 /// Layout:
 ///   wiki.yaml | pages/*.md | sources/*.md | `claims/claim_<id>.json` |
 ///   `inbox/draft_<id>.json` | .ai/runs/*.json | `.agentwiki/index.sqlite`
+///
+/// Backed by a [FileSystem] so it runs on real files (mobile/desktop) and on
+/// localStorage (web) with identical behavior.
 class WikiStore {
   final String root;
+  final FileSystem fs;
 
-  WikiStore(this.root);
+  WikiStore(this.root, {FileSystem? fs}) : fs = fs ?? createFileSystem();
 
-  Directory get pagesDir => Directory(p.join(root, 'pages'));
-  Directory get sourcesDir => Directory(p.join(root, 'sources'));
-  Directory get claimsDir => Directory(p.join(root, 'claims'));
-  Directory get inboxDir => Directory(p.join(root, 'inbox'));
-  Directory get aiRunsDir => Directory(p.join(root, '.ai', 'runs'));
-  Directory get indexDir => Directory(p.join(root, '.agentwiki'));
-  File get wikiMetaFile => File(p.join(root, 'wiki.yaml'));
-  File get indexDbFile => File(p.join(indexDir.path, 'index.sqlite'));
-  File get settingsFile => File(p.join(root, 'settings.json'));
+  String get pagesDir => p.join(root, 'pages');
+  String get sourcesDir => p.join(root, 'sources');
+  String get claimsDir => p.join(root, 'claims');
+  String get inboxDir => p.join(root, 'inbox');
+  String get aiRunsDir => p.join(root, '.ai', 'runs');
+  String get indexDir => p.join(root, '.agentwiki');
+  String get wikiMetaPath => p.join(root, 'wiki.yaml');
+  String get indexDbPath => p.join(indexDir, 'index.sqlite');
+  String get settingsPath => p.join(root, 'settings.json');
 
   void init() {
     for (final d in [pagesDir, sourcesDir, claimsDir, inboxDir, aiRunsDir, indexDir]) {
-      if (!d.existsSync()) d.createSync(recursive: true);
+      if (!fs.exists(d)) fs.createDir(d);
     }
-    if (!wikiMetaFile.existsSync()) {
+    if (!fs.exists(wikiMetaPath)) {
       writeWikiMeta(WikiMeta(name: 'My Wiki', createdAt: _epoch()));
     }
   }
@@ -43,11 +48,11 @@ class WikiStore {
   // ---------- wiki meta ----------
 
   WikiMeta readWikiMeta() {
-    if (!wikiMetaFile.existsSync()) {
+    if (!fs.exists(wikiMetaPath)) {
       return WikiMeta(name: 'My Wiki', createdAt: _epoch());
     }
     try {
-      final j = jsonDecode(_yamlToJson(wikiMetaFile.readAsStringSync()));
+      final j = jsonDecode(_yamlToJson(fs.readAsString(wikiMetaPath)));
       return WikiMeta(
         name: (j['name'] ?? 'My Wiki') as String,
         createdAt:
@@ -66,7 +71,7 @@ class WikiStore {
         'created_at: ${meta.createdAt.toIso8601String()}\n'
         'primary_model: ${meta.primaryModel ?? ''}\n'
         'corroboration_model: ${meta.corroborationModel ?? ''}\n---\n';
-    wikiMetaFile.writeAsStringSync(yaml);
+    fs.writeAsString(wikiMetaPath, yaml);
   }
 
   String _yamlToJson(String yamlText) {
@@ -89,28 +94,49 @@ class WikiStore {
   // ---------- settings (non-canonical; fallback for API key) ----------
 
   Map<String, dynamic> readSettings() {
-    if (!settingsFile.existsSync()) return {};
+    if (!fs.exists(settingsPath)) return {};
     try {
-      return jsonDecode(settingsFile.readAsStringSync())
-          as Map<String, dynamic>;
+      return jsonDecode(fs.readAsString(settingsPath)) as Map<String, dynamic>;
     } catch (_) {
       return {};
     }
   }
 
   void writeSettings(Map<String, dynamic> settings) {
-    settingsFile.writeAsStringSync(jsonEncode(settings));
+    fs.writeAsString(settingsPath, jsonEncode(settings));
   }
 
   // ---------- pages ----------
 
-  String pagePath(String filename) => p.join(pagesDir.path, filename);
+  /// Filenames of all canonical page files (e.g. `my-page-abc12345.md`).
+  List<String> listPageFiles() =>
+      fs.listFiles(pagesDir).map((f) => p.basename(f)).toList();
+
+  /// Raw markdown (frontmatter + body) of a page file. Throws if missing.
+  String readPageFile(String filename) =>
+      fs.readAsString(p.join(pagesDir, filename));
+
+  /// All canonical pages, parsed from files.
+  List<PageRecord> listPages() {
+    final out = <PageRecord>[];
+    for (final f in listPageFiles()) {
+      try {
+        final id = parseFrontmatter(readPageFile(f)).frontmatter['page_id']
+            as String?;
+        if (id == null) continue;
+        final page = readPage(id, f);
+        if (page != null) out.add(page);
+      } catch (_) {}
+    }
+    out.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return out;
+  }
 
   /// Read a page's canonical file. Returns null if missing.
   PageRecord? readPage(String id, String filename) {
-    final f = File(p.join(pagesDir.path, filename));
-    if (!f.existsSync()) return null;
-    final doc = parseFrontmatter(f.readAsStringSync());
+    final path = p.join(pagesDir, filename);
+    if (!fs.exists(path)) return null;
+    final doc = parseFrontmatter(fs.readAsString(path));
     final fm = doc.frontmatter;
     return PageRecord(
       id: (fm['page_id'] ?? id) as String,
@@ -138,37 +164,47 @@ class WikiStore {
       'claim_ids': page.claimIds,
     };
     final content = renderFrontmatter(fm, page.markdown);
-    File(p.join(pagesDir.path, page.filename)).writeAsStringSync(content);
+    fs.writeAsString(p.join(pagesDir, page.filename), content);
   }
 
   // ---------- claims ----------
 
-  File claimFile(String id) => File(p.join(claimsDir.path, 'claim_$id.json'));
+  String claimPath(String id) => p.join(claimsDir, 'claim_$id.json');
+
+  /// Ids of all canonical claims (parsed from `claim_<id>.json` filenames).
+  List<String> listClaimIds() => fs
+      .listFiles(claimsDir)
+      .map((f) => p.basenameWithoutExtension(f).replaceFirst('claim_', ''))
+      .toList();
 
   Claim? readClaim(String id) {
-    final f = claimFile(id);
-    if (!f.existsSync()) return null;
+    final path = claimPath(id);
+    if (!fs.exists(path)) return null;
     try {
-      return Claim.fromJson(
-          jsonDecode(f.readAsStringSync()) as Map<String, dynamic>);
+      return Claim.fromJson(jsonDecode(fs.readAsString(path))
+          as Map<String, dynamic>);
     } catch (_) {
       return null;
     }
   }
 
   void writeClaim(Claim claim) {
-    claimFile(claim.id).writeAsStringSync(
+    fs.writeAsString(claimPath(claim.id),
         const JsonEncoder.withIndent('  ').convert(claim.toJson()));
   }
 
   // ---------- sources ----------
 
-  File sourceFile(String id) => File(p.join(sourcesDir.path, '$id.md'));
+  String sourcePath(String id) => p.join(sourcesDir, '$id.md');
+
+  /// Filenames of all source files (non-recursive — excludes `history/`).
+  List<String> listSourceFiles() =>
+      fs.listFiles(sourcesDir).map((f) => p.basename(f)).toList();
 
   SourceRecord? readSource(String id) {
-    final f = sourceFile(id);
-    if (!f.existsSync()) return null;
-    final doc = parseFrontmatter(f.readAsStringSync());
+    final path = sourcePath(id);
+    if (!fs.exists(path)) return null;
+    final doc = parseFrontmatter(fs.readAsString(path));
     final fm = doc.frontmatter;
     return SourceRecord(
       id: (fm['id'] ?? id) as String,
@@ -192,13 +228,13 @@ class WikiStore {
       'imported_at': source.importedAt.toIso8601String(),
     };
     final content = renderFrontmatter(fm, source.content);
-    sourceFile(source.id).writeAsStringSync(content);
+    fs.writeAsString(sourcePath(source.id), content);
   }
 
   /// Preserve an older version of a source before it is overwritten.
   void writeSourceHistory(SourceRecord source) {
-    final dir = Directory(p.join(sourcesDir.path, 'history'));
-    if (!dir.existsSync()) dir.createSync(recursive: true);
+    final dir = p.join(sourcesDir, 'history');
+    if (!fs.exists(dir)) fs.createDir(dir);
     final fm = <String, dynamic>{
       'id': source.id,
       'title': source.title,
@@ -208,14 +244,13 @@ class WikiStore {
       'imported_at': source.importedAt.toIso8601String(),
     };
     final content = renderFrontmatter(fm, source.content);
-    File(p.join(dir.path, '${source.id}-v${source.version}.md'))
-        .writeAsStringSync(content);
+    fs.writeAsString(p.join(dir, '${source.id}-v${source.version}.md'), content);
   }
 
   List<SourceRecord> listSources() {
     final out = <SourceRecord>[];
-    for (final f in sourcesDir.listSync().whereType<File>()) {
-      final doc = parseFrontmatter(f.readAsStringSync());
+    for (final f in listSourceFiles()) {
+      final doc = parseFrontmatter(fs.readAsString(p.join(sourcesDir, f)));
       final fm = doc.frontmatter;
       if (fm['id'] == null) continue;
       out.add(SourceRecord(
@@ -225,8 +260,8 @@ class WikiStore {
         content: doc.body,
         contentHash: (fm['content_hash'] ?? '') as String,
         version: (fm['version'] as num?)?.toInt() ?? 1,
-        importedAt: DateTime.tryParse((fm['imported_at'] ?? '') as String) ??
-            _epoch(),
+        importedAt:
+            DateTime.tryParse((fm['imported_at'] ?? '') as String) ?? _epoch(),
       ));
     }
     out.sort((a, b) => a.importedAt.compareTo(b.importedAt));
@@ -237,10 +272,10 @@ class WikiStore {
 
   List<DraftBundle> listDrafts() {
     final out = <DraftBundle>[];
-    for (final f in inboxDir.listSync().whereType<File>()) {
+    for (final f in fs.listFiles(inboxDir)) {
       try {
         out.add(DraftBundle.fromJson(
-            jsonDecode(f.readAsStringSync()) as Map<String, dynamic>));
+            jsonDecode(fs.readAsString(f)) as Map<String, dynamic>));
       } catch (_) {}
     }
     out.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -248,24 +283,23 @@ class WikiStore {
   }
 
   void writeDraft(DraftBundle draft) {
-    File(p.join(inboxDir.path, 'draft_${draft.id}.json'))
-        .writeAsStringSync(
-            const JsonEncoder.withIndent('  ').convert(draft.toJson()));
+    fs.writeAsString(p.join(inboxDir, 'draft_${draft.id}.json'),
+        const JsonEncoder.withIndent('  ').convert(draft.toJson()));
   }
 
   // ---------- ai runs ----------
 
   void writeAiRun(Map<String, dynamic> run) {
     final id = run['id'] as String? ?? newId();
-    File(p.join(aiRunsDir.path, '$id.json'))
-        .writeAsStringSync(const JsonEncoder.withIndent('  ').convert(run));
+    fs.writeAsString(p.join(aiRunsDir, '$id.json'),
+        const JsonEncoder.withIndent('  ').convert(run));
   }
 
   List<Map<String, dynamic>> listAiRuns() {
     final out = <Map<String, dynamic>>[];
-    for (final f in aiRunsDir.listSync().whereType<File>()) {
+    for (final f in fs.listFiles(aiRunsDir)) {
       try {
-        out.add(jsonDecode(f.readAsStringSync()) as Map<String, dynamic>);
+        out.add(jsonDecode(fs.readAsString(f)) as Map<String, dynamic>);
       } catch (_) {}
     }
     out.sort((a, b) =>

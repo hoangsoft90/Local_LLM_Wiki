@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import '../core/models/models.dart';
@@ -117,12 +118,20 @@ class HomeScreen extends StatelessWidget {
       allowMultiple: false,
     );
     if (result == null || result.files.isEmpty) return;
-    final path = result.files.single.path;
-    if (path == null || !context.mounted) return;
+    final file = result.files.single;
+    final path = file.path;
+    if (!context.mounted) return;
 
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final source = app.importer.importFromPath(path);
+      final source = path != null
+          ? app.importer.importFromPath(path)
+          : file.bytes != null
+              // Web: file_picker trả bytes (không có path).
+              ? app.importer.importFromBytes(
+                  p.basenameWithoutExtension(file.name), file.bytes!)
+              : null;
+      if (source == null) return;
       messenger.showSnackBar(SnackBar(
         content: Text('Imported "${source.title}" v${source.version} — '
             'compiling…'),

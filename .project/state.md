@@ -10,7 +10,8 @@
 | App Flutter mobile `agent_wiki/` | ✅ code xong Phase 0 + 1 + 2 |
 | `flutter analyze` | ✅ No issues found |
 | `flutter test` | ✅ **28/28 pass** (gồm acceptance TEST-001..011) |
-| Build APK debug | ✅ `agent_wiki/build/app/outputs/flutter-apk/app-debug.apk` (~154 MB) |
+| Build APK | ✅ qua GH Actions (release `agentwiki-apk` ~29MB) — không build local |
+| Web platform | ✅ storage split (localStorage web / SQLite mobile), `flutter build web` OK — chưa test browser thật |
 | **Test trên device thật** | ✅ Samsung Galaxy A04 (SM-A045F, Android) qua `adb 192.168.0.101:33929` — install OK, launch OK (pid chạy), UI render 720x1600, logcat sạch (không FATAL, không E/flutter) |
 | iOS build | ⏳ chưa build (cần Xcode + simulator/device) |
 | Git | ⚠️ branch `master`, **chưa commit gì** — toàn bộ untracked (`.gitignore`, `.opencode/`, `AGENTS.md`, `CLAUDE.md`, `agent_wiki/`, `openspec/`) |

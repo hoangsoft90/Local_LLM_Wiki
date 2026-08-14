@@ -1,4 +1,5 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -49,6 +50,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _export() async {
     final app = context.read<AppState>();
+    if (kIsWeb) {
+      // getDirectoryPath không hỗ trợ web — export cần filesystem.
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:
+              Text('Export is not available on the web build.')));
+      return;
+    }
     final dir = await FilePicker.platform.getDirectoryPath();
     if (dir == null || !mounted) return;
     app.repo.exportTo(dir);

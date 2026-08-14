@@ -4,6 +4,23 @@
 > Đây là nguồn chính cho session start (đọc tự động theo AGENTS.md).
 > Log chi tiết lịch sử: `.project/working.md`.
 
+## 2026-08-14
+
+- [x] **Push code + build APK trên GH Actions** (không build local): repo đã có commit sẵn
+      (initial + CI fix), push tiếp `0c9ee72` (docs consolidation) + `c737832` (HTTP fix).
+      CI run success, artifact `agentwiki-apk` (~29MB release).
+- [x] **Fix release APK HTTP**: `android:usesCleartextTraffic="true"` + `INTERNET` permission
+      vào `AndroidManifest.xml` (main) — Android 9+ chặn cleartext mặc định ở release,
+      trước đây INTERNET chỉ nằm ở debug/profile manifest.
+- [x] **Web platform — storage split (OpenSpec change `web-platform-storage`)**: giữ nguyên
+      SQLite (iOS/Android), web dùng localStorage; tách theo platform qua 2 abstraction:
+      `FileSystem` (fs_interface/fs_io/local_storage_fs/fs_web/fs_factory — conditional import)
+      + `WikiIndex` (wiki_index/index_io/index_web/index_factory; `IndexDb implements WikiIndex`,
+      `LocalStorageIndex` in-memory rebuild từ canonical). `WikiStore`/`WikiRepository` hết `dart:io`.
+      Web stub: AdService/AdBanner (google_mobile_ads không hỗ trợ web), import qua bytes,
+      export bị guard. `flutter create --platforms web`; thêm `web ^1.1.0`; CI thêm job build-web.
+      **Verify: analyze sạch · 34/34 test (28 cũ + 6 web_storage_test trên VM) · build web OK**.
+
 ## 2026-08-11
 
 - [x] **Setup AdMob production (Android)**: App ID `ca-app-pub-6917313063209470~4401678345`
@@ -37,7 +54,8 @@
 
 ## Việc tiếp theo
 
-- [ ] **Commit lần đầu** (repo chưa có commit nào — baseline toàn repo).
+- [ ] Push web-platform-storage (đang trong working tree) → CI build APK + web.
+- [ ] Kiểm tra build web trên device/browser thật (localStorage persistence, import file).
 - [ ] Đăng ký AdMob console → lấy App ID + banner IDs thật → chuyển `useTestAds=false` (xem `lib/ads/ad_config.dart`).
 - [ ] Chạy thử luồng Import → Compile → Ask → Inbox Accept với OpenRouter key thật (Settings → nhập key).
 - [ ] Kiểm tra iOS build (`flutter build ios --no-codesign` / `flutter run -d`).
