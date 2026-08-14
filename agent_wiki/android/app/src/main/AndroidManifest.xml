@@ -1,8 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- App cần mạng (OpenRouter API + AdMob) ở MỌI build — không chỉ debug/profile. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="agent_wiki"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <!-- Impeller + platform views (AdMob AdView) có thể không hiển thị trên
              một số device → tắt Impeller để banner ad render đúng (Skia fallback). -->
         <meta-data
