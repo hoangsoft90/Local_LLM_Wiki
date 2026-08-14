@@ -26,6 +26,13 @@
       không lúc khởi động); UMP consent (io, web stub) gating banner+interstitial; `SafeArea`
       SearchScreen chống 3-button nav che; `NSUserTrackingUsageDescription` iOS. Verify: analyze
       sạch · 48/48 test (thêm `ad_cooldown_test.dart`) · build web OK.
+- [x] Navigation audit + safe-back + deep-link: rà toàn bộ nav (5 tabs + push routes + dialogs) —
+      không điểm chết. Fix: `onGenerateRoute` cho deep-link `#/page/<id>` + fallback mọi route lạ
+      (trước: crash "no route generator"); `DeepLinkPage` gate init (chống LateInitializationError
+      khi deep link là initial route); PageScreen not-found root → nút Home; `PopScope` back hệ
+      thống trong tour → skip tour; dọn warning web (wasm dry-run `sqlite3`/ffi →
+      `--no-wasm-dry-run`). Verify: analyze sạch · 52/52 test (thêm `navigation_test.dart`) ·
+      build web 0 warning.
 
 ## 2026-08-11
 

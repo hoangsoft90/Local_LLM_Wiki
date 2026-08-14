@@ -114,9 +114,20 @@ class AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
+    final guidance = context.watch<GuidanceController>();
     final pending = app.pendingInboxCount;
 
-    return Scaffold(
+    return PopScope(
+      // Safe back: khi tour onboarding đang hiển thị (overlay không phải
+      // route), nút back hệ thống KHÔNG được thoát app — thay vào đó bỏ qua
+      // tour (đã lưu trạng thái seen, không hiện lại).
+      canPop: !guidance.isActive,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop || !mounted) return;
+        final g = context.read<GuidanceController>();
+        if (g.isActive) g.skip();
+      },
+      child: Scaffold(
       body: IndexedStack(
         index: _tab,
         children: const [
@@ -181,6 +192,7 @@ class AppShellState extends State<AppShell> {
             label: 'Settings',
           ),
         ],
+      ),
       ),
     );
   }

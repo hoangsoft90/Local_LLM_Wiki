@@ -46,6 +46,17 @@
       `NSUserTrackingUsageDescription` (iOS); (4) **chống che khuất bởi 3-button nav**: `SafeArea`
       cho SearchScreen (route full-screen duy nhất thiếu), NavigationBar M3 + AdBanner đã tự xử lý.
       **Verify: analyze sạch · 48/48 test (4 mới: cooldown + config) · build web OK**.
+- [x] **Navigation audit + safe-back + deep-link + web warnings**: rà toàn bộ nav (5 tabs
+      IndexedStack + push routes Home/Search/Ask/Page ↔ Page + dialogs) — không điểm chết, mọi
+      route push đều có AppBar back. Fix: (1) deep-link `#/page/<id>` + mọi route name lạ qua
+      `onGenerateRoute` (trước đây crash "no route generator" khi reload web/URL lạ) — route
+      deep-link qua `DeepLinkPage` gate init (tránh LateInitializationError vì PageScreen đọc
+      `repo` late); (2) PageScreen not-found khi là root route (deep link xấu) → nút Home thay
+      vì mắc kẹt; (3) `PopScope` — nút back hệ thống khi tour onboarding đang hiện → skip tour
+      thay vì thoát app; (4) dọn warning web: wasm dry-run báo `sqlite3` (dart:ffi) không
+      tương thích wasm → web build thêm `--no-wasm-dry-run` (CI + local), verify build web
+      **0 warning**. Test mới: `navigation_test.dart` (deep-link parsing + route contract).
+      **Verify: analyze sạch · 52/52 test · build web 0 warning**.
 
 ## 2026-08-11
 

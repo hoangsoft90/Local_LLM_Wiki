@@ -76,7 +76,9 @@ jobs:
 
       - name: Build web (release)
         working-directory: agent_wiki
-        run: flutter build web --release
+        # --no-wasm-dry-run: web dùng localStorage (không sqlite) và sqlite3 là
+        # dart:ffi nên wasm không phải target — dry-run chỉ sinh warning nhiễu.
+        run: flutter build web --release --no-wasm-dry-run
 
       - name: Upload web artifact
         uses: actions/upload-artifact@v4

@@ -18,8 +18,20 @@ class PageScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final page = app.repo.getPage(pageId);
     if (page == null) {
+      // Deep link tới page không tồn tại / đã xoá: nếu đây là route đầu tiên
+      // (không có gì để pop) thì không thể mắc kẹt ở đây — luôn có nút Home.
       return Scaffold(
-        appBar: AppBar(title: const Text('Page not found')),
+        appBar: AppBar(
+          title: const Text('Page not found'),
+          leading: Navigator.of(context).canPop()
+              ? null // back arrow tự động (có route phía sau)
+              : IconButton(
+                  icon: const Icon(Icons.home_outlined),
+                  tooltip: 'Back to home',
+                  onPressed: () =>
+                      Navigator.of(context).pushReplacementNamed('/'),
+                ),
+        ),
         body: const Center(child: Text('This page no longer exists.')),
       );
     }

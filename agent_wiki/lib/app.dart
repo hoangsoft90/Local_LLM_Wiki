@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'ui/app_shell.dart';
 import 'ui/guidance/guidance_state.dart';
+import 'ui/page_screen.dart';
 import 'ui/state/app_state.dart';
 
 class AgentWikiApp extends StatelessWidget {
@@ -19,6 +20,12 @@ class AgentWikiApp extends StatelessWidget {
       child: MaterialApp(
         title: 'AgentWiki',
         debugShowCheckedModeBanner: false,
+        // Deep-link / initial-route handling (web URL `#/…`, Android intent,
+        // reload). Không có route table → mọi path lạ hiện đang crash với
+        // "Could not find a generator for route". Ở đây:
+        //   `/page/<id>` → PageScreen (quay về page qua deep link),
+        //   mọi path khác/rỗng → AppHome (không bao giờ điểm chết).
+        onGenerateRoute: buildAppRoute,
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
@@ -52,6 +59,55 @@ class AgentWikiApp extends StatelessWidget {
         home: const AppHome(),
       ),
     );
+  }
+}
+
+/// Route builder cho deep links — luôn trả về một route hợp lệ, không bao
+/// giờ trả null (không để Navigator rơi vào "no route generator").
+Route<dynamic>? buildAppRoute(RouteSettings settings) {
+  final name = settings.name ?? '/';
+  final pageId = deepLinkPageId(name);
+  if (pageId != null) {
+    // `/page/<id>` — deep link quay về một page cụ thể (web/initial route).
+    return MaterialPageRoute(
+      settings: settings,
+      builder: (_) => DeepLinkPage(pageId: pageId),
+    );
+  }
+  // Mọi path khác (kể cả `/` và path không rõ) → home. Không bao giờ để
+  // Navigator rơi vào "no route generator" (điểm chết trên web reload).
+  return MaterialPageRoute(
+    settings: settings,
+    builder: (_) => const AppHome(),
+  );
+}
+
+/// Trích page id từ route name deep link: `page/<id>` hoặc `/page/<id>`
+/// (URL-encoded). Trả null khi không phải deep link page.
+String? deepLinkPageId(String routeName) {
+  final match = RegExp(r'^/?page/(.+)$').firstMatch(routeName);
+  if (match == null) return null;
+  final id = Uri.decodeComponent(match.group(1)!);
+  return id.isEmpty ? null : id;
+}
+
+/// Deep-link gate: giống [AppHome] — PageScreen đọc `app.repo` (late), nếu
+/// build trước khi `AppState.init()` xong sẽ `LateInitializationError`. Route
+/// `/page/<id>` là INITIAL route (web/deep link) → phải chờ init như home.
+class DeepLinkPage extends StatelessWidget {
+  final String pageId;
+  const DeepLinkPage({super.key, required this.pageId});
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    if (app.error != null) {
+      return _InitErrorScreen(message: app.error!);
+    }
+    if (!app.initialized) {
+      return const _SplashScreen();
+    }
+    return PageScreen(pageId: pageId);
   }
 }
 
