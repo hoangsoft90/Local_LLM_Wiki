@@ -1,6 +1,3 @@
-## Cấu hình PATH (BẮT BUỘC)
-Trước BẤT KỲ lệnh nào: 
-`export PATH="/Users/hoang/.nvm/versions/node/v24.18.0/bin:/opt/miniconda3/bin:$PATH"`
 
 ## MỤC LỤC & THỨ TỰ THỰC THI TỔNG THỂ
 
