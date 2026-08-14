@@ -39,6 +39,8 @@ class _AdBannerState extends State<AdBanner> {
     final unitId = AdService.instance.bannerAdUnitId;
     if (unitId == null) return; // nền tảng không hỗ trợ → không render gì
 
+    // UMP consent gate: không request ad trước khi có consent (policy-safe).
+    if (!await AdService.instance.adsAllowed) return;
     try {
       await AdService.instance.ready;
     } catch (_) {
@@ -89,15 +91,12 @@ class _AdBannerState extends State<AdBanner> {
     final banner = _banner;
     if (!_loaded || banner == null) return const SizedBox.shrink();
     debugPrint('[AdBanner] build — rendering AdWidget');
-    return Container(
-      color: const Color(0xFFFFE0E0), // DEBUG: xác nhận vị trí chiếm chỗ
-      child: Center(
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: AdWidget(ad: banner),
-          ),
+    return Center(
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: AdWidget(ad: banner),
         ),
       ),
     );

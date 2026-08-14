@@ -62,9 +62,9 @@ agent_wiki/       # Flutter app
 
 - **Trạng thái**: banner ads (Home + Page screen) bằng `google_mobile_ads ^9.0.0`. **Android đã production** (2026-08-11): App ID `ca-app-pub-6917313063209470~4401678345` + banner `.../1911246375` (`useTestAds=false`). **iOS còn test** — chưa có app/ad unit iOS trên AdMob.
 - **Cấu hình native**: Android App ID thật trong `AndroidManifest.xml` (`com.google.android.gms.ads.APPLICATION_ID`) · iOS App ID vẫn là **test ID** `ca-app-pub-3940256099942544~*` trong `Info.plist` (`GADApplicationIdentifier` + SKAdNetworkItems).
-- **Interstitial/Rewarded**: ID thật đã lưu trong `lib/ads/ad_config.dart` (`kAndroidProdInterstitial`/`kAndroidProdRewarded`) nhưng **chưa có code dùng**.
+- **Interstitial**: đã wire (2026-08-14) — `AdService.loadInterstitial()`/`showInterstitialIfAvailable()` + cooldown 2 phút, trigger khi đổi tab; **Rewarded**: ID thật đã lưu (`kAndroidProdRewarded`) nhưng chưa có UI dùng.
 - **Khi thêm iOS**: tạo app iOS trên AdMob console → lấy App ID + banner riêng → đổi `Info.plist` + `_kIosProdBanner`.
-- **⚠️ Dev build Android giờ cũng load ad thật** (`useTestAds=false` áp cả debug) — tránh click ad của chính mình lúc dev để không dính invalid traffic; nếu cần dev an toàn, tạm bật `useTestAds=true`.
+- **AdMob test mode**: `testAds=true` (mặc định) — mọi ad unit (banner/interstitial/rewarded) dùng test ID Google trên cả 2 platform, an toàn cho dev. Đổi `testAds=false` khi release (Android đã có production ID; iOS vẫn test tới khi tạo app trên AdMob). UMP consent đã wire (io), gating ad load.
 - **KHÔNG đặt banner trên Ask screen** (nội dung LLM-generated dễ bị AdMob hạn chế "replicated/low-value content" — research web 2026).
 - Chi tiết hướng dẫn đăng ký AdMob console: `working.md`.
 

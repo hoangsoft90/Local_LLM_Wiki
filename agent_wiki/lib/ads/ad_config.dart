@@ -1,44 +1,69 @@
 /// AdMob configuration — single place to switch test → production ad units.
 ///
-/// **Android**: đã sang production — App ID thật trong `AndroidManifest.xml`
-/// (`ca-app-pub-6917313063209470~4401678345`) + banner thật bên dưới.
-/// **iOS**: chưa có app/ad unit riêng trên AdMob → vẫn dùng test ID tới khi
-/// tạo được (ad unit ID là per-platform, KHÔNG dùng chung Android/iOS được).
+/// **Flag `testAds`**: khi `true` (mặc định cho dev), MỌI loại ad unit
+/// (banner / interstitial / rewarded) dùng test ID chính thức của Google trên
+/// cả 2 platform → không bao giờ chạm inventory thật lúc dev/test, tránh
+/// invalid-traffic penalty từ AdMob. Đổi sang `false` khi release:
 ///
-/// ⚠️ App ID trong `AndroidManifest.xml` đã là ID thật; `Info.plist` (iOS)
-/// đang giữ test ID chờ tạo app iOS trên AdMob console.
+/// 1. Android: đã có App ID + banner/interstitial/rewarded production (xem dưới).
+/// 2. iOS: chưa có app/ad unit riêng trên AdMob → luôn test tới khi tạo được
+///    (ad unit ID là per-platform, KHÔNG dùng chung Android/iOS được).
+///
+/// ⚠️ App ID trong `AndroidManifest.xml` là ID thật; `Info.plist` (iOS) giữ
+/// test ID chờ tạo app iOS trên AdMob console.
 library;
 
-/// Android: `false` = production banner. iOS luôn dùng test ID (xem dưới).
-const bool useTestAds = false;
+/// `true` = test ads (dev an toàn) / `false` = production ads.
+const bool testAds = true;
 
-/// Banner ad unit IDs (theo platform).
-/// Test IDs chính thức của Google — dùng cho dev không bị phạt invalid traffic.
+/// Khoảng tối thiểu giữa 2 lần hiển thị interstitial (chống spam, đúng
+/// AdMob policy: không hiện ad liên tiếp / lúc khởi động app).
+const Duration interstitialMinInterval = Duration(minutes: 2);
+
+// ---------- Test IDs chính thức của Google (dev — không bị phạt) ----------
+
 const String _kAndroidTestBanner = 'ca-app-pub-3940256099942544/6300978111';
 const String _kIosTestBanner = 'ca-app-pub-3940256099942544/2934735716';
+const String _kAndroidTestInterstitial =
+    'ca-app-pub-3940256099942544/1033173712';
+const String _kIosTestInterstitial = 'ca-app-pub-3940256099942544/4411468910';
+const String _kAndroidTestRewarded = 'ca-app-pub-3940256099942544/5224354917';
+const String _kIosTestRewarded = 'ca-app-pub-3940256099942544/1712485313';
 
-// ---------- Production (Android) ----------
+// ---------- Production (Android — đã tạo trên AdMob) ----------
 
 /// Banner thật (Android) — ca-app-pub-6917313063209470/1911246375.
 const String _kAndroidProdBanner = 'ca-app-pub-6917313063209470/1911246375';
 
-// ---------- Reserved — chưa có UI/code dùng (lưu ID để dành) ----------
-
 /// Interstitial thật (Android) — ca-app-pub-6917313063209470/1759771350.
-/// Chưa có code dùng — thêm khi implement interstitial.
 const String kAndroidProdInterstitial =
     'ca-app-pub-6917313063209470/1759771350';
 
 /// Rewarded thật (Android) — ca-app-pub-6917313063209470/9446689683.
-/// Chưa có code dùng — thêm khi implement rewarded.
 const String kAndroidProdRewarded = 'ca-app-pub-6917313063209470/9446689683';
 
 /// Trả về banner ad unit ID cho platform hiện tại.
-/// Android: test hoặc production theo [useTestAds].
+/// Android: test hoặc production theo [testAds].
 /// iOS: chưa có production ad unit → luôn test tới khi tạo được.
 String bannerAdUnitId({required bool isAndroid}) {
   if (isAndroid) {
-    return useTestAds ? _kAndroidTestBanner : _kAndroidProdBanner;
+    return testAds ? _kAndroidTestBanner : _kAndroidProdBanner;
   }
   return _kIosTestBanner;
+}
+
+/// Trả về interstitial ad unit ID cho platform hiện tại.
+String interstitialAdUnitId({required bool isAndroid}) {
+  if (isAndroid) {
+    return testAds ? _kAndroidTestInterstitial : kAndroidProdInterstitial;
+  }
+  return _kIosTestInterstitial;
+}
+
+/// Trả về rewarded ad unit ID cho platform hiện tại (chưa có UI dùng).
+String rewardedAdUnitId({required bool isAndroid}) {
+  if (isAndroid) {
+    return testAds ? _kAndroidTestRewarded : kAndroidProdRewarded;
+  }
+  return _kIosTestRewarded;
 }

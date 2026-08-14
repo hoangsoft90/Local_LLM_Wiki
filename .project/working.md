@@ -19,6 +19,13 @@
       (FeatureBadge · SpotlightOverlay · DisabledStateHelper · GuidanceController + shared_preferences),
       tích hợp first-run tour Home (Ask→Import→Inbox), badge New Inbox, disabled-helper nút Ask.
       Verify: analyze sạch · 44/44 test (thêm `guidance_test.dart`) · build web OK.
+- [x] Code review toàn diện: fix FeatureBadge "New" chưa render (wire Inbox tab), SpotlightOverlay
+      kẹt khi target null (fallback visible tooltip), bỏ nền hồng DEBUG sau banner, guard export iOS.
+- [x] AdMob monetization (`openspec/changes/ads-monetization`): flag `testAds=true` (mọi ad unit →
+      test ID Google cả 2 platform khi dev); interstitial + `AdCooldown` (2 phút, trigger đổi tab,
+      không lúc khởi động); UMP consent (io, web stub) gating banner+interstitial; `SafeArea`
+      SearchScreen chống 3-button nav che; `NSUserTrackingUsageDescription` iOS. Verify: analyze
+      sạch · 48/48 test (thêm `ad_cooldown_test.dart`) · build web OK.
 
 ## 2026-08-11
 

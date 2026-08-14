@@ -67,7 +67,15 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
     if (ctx == null || !mounted) return;
     final box = ctx.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize) return;
-    setState(() => _tooltipSize = box.size);
+    // The target may not be laid out on the very first frame (e.g. the tour
+    // fired before the page finished building) — retry once now that the
+    // tooltip itself has a size.
+    var target = _target;
+    target ??= globalRectOf(widget.step.targetKey);
+    setState(() {
+      _target = target;
+      _tooltipSize = box.size;
+    });
   }
 
   @override
@@ -102,7 +110,7 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
     late final Widget placed;
     final target = _target;
     final size = _tooltipSize;
-    if (target == null || size == null) {
+    if (size == null) {
       placed = Positioned(
         left: 0,
         top: 0,
@@ -111,11 +119,17 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
             child: Opacity(opacity: 0, child: tooltip)), // measure pass
       );
     } else {
+      // If the target still can't be found, anchor to a centered rect so the
+      // tooltip is ALWAYS visible and the user can tap Skip/Next/Done — never
+      // leave a blocking invisible overlay (the tour must always be escapable).
+      final anchor = target ??
+          Rect.fromCenter(
+              center: screen.center(Offset.zero), width: 200, height: 80);
       final placement = resolvePlacement(
-          target: target, tooltipSize: size, screen: screen,
+          target: anchor, tooltipSize: size, screen: screen,
           preferred: widget.step.placement);
       final offset = tooltipOffset(
-          target: target,
+          target: anchor,
           tooltipSize: size,
           screen: screen,
           placement: placement);

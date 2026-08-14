@@ -35,7 +35,11 @@ class AppState extends ChangeNotifier {
       _wireServices(await settings.apiKey());
       // AdMob init — fire-and-forget, không chặn màn hình splash.
       // Nếu init fail, AdBanner tự xử lý (không hiển thị) — không ảnh hưởng app.
-      unawaited(AdService.instance.ready.then((_) {}, onError: (_) {}));
+      unawaited(AdService.instance.ready.then((_) {
+        // Preload interstitial ngay khi SDK sẵn sàng (consent gate bên trong),
+        // để sẵn khi user đổi tab.
+        AdService.instance.loadInterstitial();
+      }, onError: (_) {}));
       initialized = true;
       notifyListeners();
     } catch (e) {

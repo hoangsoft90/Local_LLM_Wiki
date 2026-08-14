@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../ads/ad_service.dart';
+import 'guidance/feature_badge.dart';
 import 'guidance/guidance_models.dart';
 import 'guidance/guidance_state.dart';
 import 'state/app_state.dart';
@@ -99,7 +103,13 @@ class AppShellState extends State<AppShell> {
     guidance.markFeatureSeen(kInboxFeatureKey);
   }
 
-  void switchTab(int tab) => setState(() => _tab = tab);
+  void switchTab(int tab) {
+    setState(() => _tab = tab);
+    // Interstitial monetization: chỉ hiện khi đã preload VÀ qua cooldown
+    // (xem AdService.showInterstitialIfAvailable) — không bao giờ lúc khởi
+    // động app, không spam (AdMob policy).
+    unawaited(AdService.instance.showInterstitialIfAvailable());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -138,15 +148,25 @@ class AppShellState extends State<AppShell> {
             label: 'Ask',
           ),
           NavigationDestination(
-            icon: Badge(
-              isLabelVisible: pending > 0,
-              label: Text('$pending'),
-              child: const Icon(Icons.inbox_outlined),
+            // "New" badge for first-time users (Flow B / corroboration) until
+            // the feature is seen — retired by the tour or opening the tab.
+            icon: FeatureBadge(
+              config: const FeatureBadgeConfig(
+                  featureKey: kInboxFeatureKey, label: 'New'),
+              child: Badge(
+                isLabelVisible: pending > 0,
+                label: Text('$pending'),
+                child: const Icon(Icons.inbox_outlined),
+              ),
             ),
-            selectedIcon: Badge(
-              isLabelVisible: pending > 0,
-              label: Text('$pending'),
-              child: const Icon(Icons.inbox),
+            selectedIcon: FeatureBadge(
+              config: const FeatureBadgeConfig(
+                  featureKey: kInboxFeatureKey, label: 'New'),
+              child: Badge(
+                isLabelVisible: pending > 0,
+                label: Text('$pending'),
+                child: const Icon(Icons.inbox),
+              ),
             ),
             label: 'Inbox',
           ),

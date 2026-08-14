@@ -30,6 +30,10 @@
 	     load tới khi tạo app iOS trên AdMob console và thay App ID riêng của iOS). -->
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<!-- ATT (App Tracking Transparency) — bắt buộc khi UMP/AdMob muốn theo
+	     dõi trên iOS 14.5+. Chuỗi này hiện khi hệ thống hỏi quyền track. -->
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This identifier will be used to deliver personalized ads to you.</string>
 	<!-- SKAdNetworkItems: trước khi release, thay bằng danh sách đầy đủ các
 	     SKAdNetworkIdentifier do Google công bố (xem AdMob docs) — chỉ 1 ID
 	     như hiện tại sẽ hạn chế attribution/doanh thu iOS trên production. -->

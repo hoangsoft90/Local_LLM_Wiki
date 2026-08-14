@@ -28,6 +28,24 @@
       `GuidanceController` (persist `seen.*`/`step.*` qua shared_preferences, chỉ hiện 1 lần, version bump re-show).
       Tích hợp: onboarding first-run 3 bước (Ask→Import→Inbox) trên Home, badge New cho Inbox,
       disabled-helper cho nút Ask. **Verify: analyze sạch · 44/44 test (34 cũ + 10 guidance) · build web OK**.
+- [x] **Code review toàn diện (UI/logic/crash)** — fix 4 lỗi: (1) `FeatureBadge` "New" khai báo
+      nhưng chưa render ở đâu → wire vào Inbox tab (app_shell); (2) `SpotlightOverlay` kẹt khi
+      `globalRectOf` trả null (tooltip vô hình + barrier chặn toàn màn hình, không thoát được)
+      → fallback anchor giữa màn hình + re-query target sau khi đo; (3) bỏ nền hồng DEBUG
+      `0xFFFFE0E0` sau AdMob banner (hiện ở production khi ad load); (4) guard export Settings
+      trên iOS (`getDirectoryPath` không implement → trước đây throw exception không xử lý).
+      **Verify: analyze sạch · 44/44 test · build web OK**.
+- [x] **AdMob monetization (OpenSpec `ads-monetization`)** — (1) flag `testAds=true` trong
+      `ad_config.dart`: mọi ad unit (banner/interstitial/rewarded) dùng test ID Google trên cả 2
+      platform khi dev → tránh invalid-traffic; (2) **interstitial + cooldown**: `AdCooldown`
+      (pure Dart, clock injectable, có test) + `AdService.loadInterstitial()`/
+      `showInterstitialIfAvailable()` (chỉ hiện khi load xong VÀ qua `interstitialMinInterval`
+      = 2 phút); trigger khi đổi tab trong AppShell, không bao giờ lúc khởi động; (3) **UMP
+      consent**: `ConsentManager` (io = `ConsentInformation`+`ConsentForm`, web = stub), gating
+      `AdService.ready` + banner load; `main.dart` kick-off fire-and-forget; thêm
+      `NSUserTrackingUsageDescription` (iOS); (4) **chống che khuất bởi 3-button nav**: `SafeArea`
+      cho SearchScreen (route full-screen duy nhất thiếu), NavigationBar M3 + AdBanner đã tự xử lý.
+      **Verify: analyze sạch · 48/48 test (4 mới: cooldown + config) · build web OK**.
 
 ## 2026-08-11
 

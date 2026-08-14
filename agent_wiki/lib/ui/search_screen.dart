@@ -44,17 +44,21 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         ),
       ),
-      body: _results.isEmpty
-          ? Center(
-              child: Text(
-                _controller.text.trim().isEmpty
-                    ? 'Type to search pages & claims'
-                    : 'No results for "${_controller.text.trim()}"',
-                style: theme.textTheme.bodyMedium!
-                    .copyWith(color: theme.colorScheme.outline),
-              ),
-            )
-          : ListView.builder(
+      // SafeArea: screen này là route full-screen (không có bottom nav bar) —
+      // với edge-to-edge (targetSdk 36), nội dung đáy có thể chạy sau 3 nút
+      // điều hướng Android nếu không pad theo system inset.
+      body: SafeArea(
+        child: _results.isEmpty
+            ? Center(
+                child: Text(
+                  _controller.text.trim().isEmpty
+                      ? 'Type to search pages & claims'
+                      : 'No results for "${_controller.text.trim()}"',
+                  style: theme.textTheme.bodyMedium!
+                      .copyWith(color: theme.colorScheme.outline),
+                ),
+              )
+            : ListView.builder(
               padding: const EdgeInsets.all(12),
               itemCount: _results.length,
               itemBuilder: (_, i) {
@@ -92,6 +96,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 );
               },
             ),
+      ),
     );
   }
 

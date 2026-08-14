@@ -57,11 +57,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text('Export is not available on the web build.')));
       return;
     }
-    final dir = await FilePicker.platform.getDirectoryPath();
-    if (dir == null || !mounted) return;
-    app.repo.exportTo(dir);
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Wiki exported to $dir')));
+    try {
+      final dir = await FilePicker.platform.getDirectoryPath();
+      if (dir == null || !mounted) return;
+      app.repo.exportTo(dir);
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Wiki exported to $dir')));
+    } catch (e) {
+      // file_picker's getDirectoryPath is unimplemented on iOS — surface it
+      // instead of an unhandled async exception.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export unavailable on this platform: $e')));
+    }
   }
 
   Future<void> _rebuild() async {

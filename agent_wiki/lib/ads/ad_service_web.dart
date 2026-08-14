@@ -6,5 +6,13 @@ class AdService {
 
   Future<void> get ready async {}
 
+  Future<bool> get adsAllowed async => true;
+
   String? get bannerAdUnitId => null;
+
+  String? get interstitialAdUnitId => null;
+
+  Future<void> loadInterstitial() async {}
+
+  Future<bool> showInterstitialIfAvailable() async => false;
 }
