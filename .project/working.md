@@ -15,6 +15,10 @@
       `dart:io`. Web stubs: ads (google_mobile_ads không hỗ trợ web), import bytes, export guard.
       Thêm web platform + `web ^1.1.0` + CI job build-web. Verify: analyze sạch · 34/34 test
       (thêm `web_storage_test.dart` VM) · `flutter build web` OK.
+- [x] In-app Guidance & Onboarding (`openspec/changes/in-app-guidance`): module `lib/ui/guidance/`
+      (FeatureBadge · SpotlightOverlay · DisabledStateHelper · GuidanceController + shared_preferences),
+      tích hợp first-run tour Home (Ask→Import→Inbox), badge New Inbox, disabled-helper nút Ask.
+      Verify: analyze sạch · 44/44 test (thêm `guidance_test.dart`) · build web OK.
 
 ## 2026-08-11
 

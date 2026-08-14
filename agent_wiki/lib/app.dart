@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'ui/app_shell.dart';
+import 'ui/guidance/guidance_state.dart';
 import 'ui/state/app_state.dart';
 
 class AgentWikiApp extends StatelessWidget {
@@ -9,8 +10,12 @@ class AgentWikiApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AppState()..init(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppState()..init()),
+        // In-app guidance state (onboarding tours, feature badges).
+        ChangeNotifierProvider(create: (_) => GuidanceController()..init()),
+      ],
       child: MaterialApp(
         title: 'AgentWiki',
         debugShowCheckedModeBanner: false,

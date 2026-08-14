@@ -22,6 +22,12 @@
       **Verify: analyze sạch · 34/34 test (28 cũ + 6 web_storage_test trên VM) · build web OK**.
 - [x] **targetSdk 36** (Google Play yêu cầu từ 31/08/2026): hardcode `compileSdk = 36` +
       `targetSdk = 36` trong `android/app/build.gradle.kts` (không phụ thuộc default Flutter; CI pin 3.44.6).
+- [x] **In-app Guidance & Onboarding** (OpenSpec `in-app-guidance`): module `lib/ui/guidance/` —
+      `FeatureBadge` (dot/label New, ẩn khi seen), `SpotlightOverlay` (dim + cutout + tooltip auto-position,
+      Skip/Next/Done, bước nối tiếp), `DisabledStateHelper` (giải thích lý do disabled + điều kiện unlock khi tap),
+      `GuidanceController` (persist `seen.*`/`step.*` qua shared_preferences, chỉ hiện 1 lần, version bump re-show).
+      Tích hợp: onboarding first-run 3 bước (Ask→Import→Inbox) trên Home, badge New cho Inbox,
+      disabled-helper cho nút Ask. **Verify: analyze sạch · 44/44 test (34 cũ + 10 guidance) · build web OK**.
 
 ## 2026-08-11
 

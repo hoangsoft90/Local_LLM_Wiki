@@ -3,6 +3,8 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 
 import '../core/models/answer_result.dart';
+import 'guidance/disabled_state_helper.dart';
+import 'guidance/guidance_models.dart';
 import 'page_screen.dart';
 import 'state/app_state.dart';
 
@@ -26,8 +28,20 @@ class _AskScreenState extends State<AskScreen> {
   bool _busy = false;
   bool _saving = false;
 
+  bool get _hasText => _controller.text.trim().isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    // Rebuild so the send button enables/disables as the user types.
+    _controller.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() => setState(() {});
+
   @override
   void dispose() {
+    _controller.removeListener(_onTextChanged);
     _controller.dispose();
     super.dispose();
   }
@@ -139,14 +153,22 @@ class _AskScreenState extends State<AskScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: _busy ? null : _ask,
-                    icon: _busy
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.arrow_upward),
+                  // Disabled while typing? Explains why on tap (guidance).
+                  DisabledStateHelper(
+                    enabled: _hasText,
+                    config: const DisabledStateConfig(
+                      reason: 'There is no question to send yet.',
+                      unlockHint: 'Type a question above to enable Ask.',
+                    ),
+                    child: IconButton.filled(
+                      onPressed: (_busy || !_hasText) ? null : _ask,
+                      icon: _busy
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.arrow_upward),
+                    ),
                   ),
                 ],
               ),

@@ -10,6 +10,12 @@ import 'page_screen.dart';
 import 'search_screen.dart';
 import 'widgets/ad_banner.dart';
 
+/// Onboarding targets — attached to the Home quick-action buttons so the
+/// first-run spotlight tour can highlight them (see app_shell.dart).
+final GlobalKey onboardingAskKey = GlobalKey();
+final GlobalKey onboardingImportKey = GlobalKey();
+final GlobalKey onboardingInboxKey = GlobalKey();
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -59,6 +65,7 @@ class HomeScreen extends StatelessWidget {
                     icon: Icons.auto_awesome,
                     label: 'Ask',
                     color: theme.colorScheme.primary,
+                    highlightKey: onboardingAskKey,
                     onTap: () => _goToTab(context, 1),
                   ),
                   const SizedBox(width: 8),
@@ -66,6 +73,7 @@ class HomeScreen extends StatelessWidget {
                     icon: Icons.file_download_outlined,
                     label: 'Import',
                     color: const Color(0xFF2E7D32),
+                    highlightKey: onboardingImportKey,
                     onTap: () => _importSource(context, app),
                   ),
                   const SizedBox(width: 8),
@@ -73,6 +81,7 @@ class HomeScreen extends StatelessWidget {
                     icon: Icons.inbox_outlined,
                     label: 'Inbox',
                     color: const Color(0xFF6A1B9A),
+                    highlightKey: onboardingInboxKey,
                     badge: app.pendingInboxCount,
                     onTap: () => _goToTab(context, 2),
                   ),
@@ -217,6 +226,7 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final Color color;
   final int badge;
+  final GlobalKey? highlightKey;
   final VoidCallback onTap;
 
   const _ActionButton({
@@ -224,6 +234,7 @@ class _ActionButton extends StatelessWidget {
     required this.label,
     required this.color,
     this.badge = 0,
+    this.highlightKey,
     required this.onTap,
   });
 
@@ -235,6 +246,7 @@ class _ActionButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
+          key: highlightKey,
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.10),
